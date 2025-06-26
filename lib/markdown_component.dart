@@ -224,14 +224,6 @@ class HTag extends BlockMd {
               text: "\n ",
               style: TextStyle(fontSize: 0, height: 0),
             ),
-            WidgetSpan(
-              child: CustomDivider(
-                height: theme.hrLineThickness,
-                color:
-                    config.style?.color ??
-                    Theme.of(context).colorScheme.outline,
-              ),
-            ),
           ],
         ],
       ),
