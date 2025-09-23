@@ -1,3 +1,26 @@
+## 1.1.4
+
+* 🔗 Fixed vertical alignment issue with link text rendering ([#92](https://github.com/Infinitix-LLC/gpt_markdown/issues/92))
+* 📝 Resolved "null" rendering issue in ordered lists with multiple spaces and line breaks ([#89](https://github.com/Infinitix-LLC/gpt_markdown/issues/89))
+* 🧹 Removed erroneous `trim()` from `CodeBlockMd` to preserve necessary whitespace in code blocks ([#99](https://github.com/Infinitix-LLC/gpt_markdown/issues/99))
+* 🎨 Fixed heading style customization issue where custom colors in heading styles were not being applied ([#95](https://github.com/Infinitix-LLC/gpt_markdown/issues/95))
+
+## 1.1.3
+
+* Added `RadioGroup` widget for managing radio buttons.
+* Updated to align with Flutter 3.35 by resolving the deprecations of `Radio.groupValue` and `Radio.onChanged`.
+
+## 1.1.2
+
+* 📊 Fixed table column alignment support ([#65](https://github.com/Infinitix-LLC/gpt_markdown/issues/65))
+* 🎨 Added `tableBuilder` parameter to customize table rendering
+* 🔗 Fixed text decoration color of link markdown component
+
+## 1.1.1
+
+* 🖼️ Fixed issue where images wrapped in links (e.g. `[![](img)](url)`) were not rendering properly (#72)
+* 🔗 Resolved parsing errors for consecutive inline links without spacing (e.g. `[a](url)[b](url)`) (#34)
+
 ## 1.1.0
 
 * Changed `onLinkTab` to `onLinkTap` fixed issues of newLine issues.
