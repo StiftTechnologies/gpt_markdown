@@ -290,16 +290,16 @@ class _RenderSelectableAdapter extends RenderProxyBox
     return value.hasSelection ? SelectedContent(plainText: selectedText) : null;
   }
 
-  // @override
-  // SelectedContent? getSelection() {
-  //   if (!value.hasSelection) {
-  //     return null;
-  //   }
-  //   return const SelectedContentRange(startOffset: 0, endOffset: 1);
-  // }
+  @override
+  SelectedContentRange? getSelection() {
+    if (!value.hasSelection) {
+      return null;
+    }
+    return const SelectedContentRange(startOffset: 0, endOffset: 1);
+  }
 
-  // @override
-  // int get contentLength => 1;
+  @override
+  int get contentLength => 1;
 
   LayerLink? _startHandle;
   LayerLink? _endHandle;
