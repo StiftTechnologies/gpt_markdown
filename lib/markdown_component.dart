@@ -335,7 +335,6 @@ class HTag extends BlockMd {
               ? levelStyle
               : (levelStyle ?? const TextStyle()).merge(override),
     );
-    final headingDividerPadding = headingStyle.dividerPadding;
     final headingPadding = headingStyle.padding;
 
     final headingBuilder = config.headingBuilder;
