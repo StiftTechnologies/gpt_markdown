@@ -144,7 +144,8 @@ void main() {
 
     expect(find.byType(CustomCb), findsOneWidget);
     expect(find.byType(BlockQuoteWidget), findsOneWidget);
-    // One for the rule, one under the h1.
-    expect(find.byType(CustomDivider), findsNWidgets(2));
+    // One for the rule. This fork drops the rule upstream draws under an h1,
+    // so there is no second divider here.
+    expect(find.byType(CustomDivider), findsOneWidget);
   });
 }
