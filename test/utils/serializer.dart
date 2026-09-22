@@ -5,7 +5,19 @@ import 'package:gpt_markdown/custom_widgets/custom_rb_cb.dart';
 import 'package:gpt_markdown/custom_widgets/indent_widget.dart';
 import 'package:gpt_markdown/custom_widgets/link_button.dart';
 import 'package:gpt_markdown/custom_widgets/unordered_ordered_list.dart';
-import 'package:gpt_markdown/gpt_markdown.dart' show MarkdownComponent, MdWidget;
+import 'package:gpt_markdown/gpt_markdown.dart'
+    show CodeTextSpan, LinkTextSpan, MarkdownComponent, MdWidget;
+
+/// Serializes a single widget that is not inside a paragraph.
+///
+/// Block constructs used to reach the serializer as `WidgetSpan`s inside a
+/// `RichText`. They are plain siblings in a column now, so they have to be
+/// picked up from the widget tree directly or they serialize to nothing.
+String serializeBlockWidget(Widget widget) {
+  final serializer = MarkdownSerializer();
+  serializer._visitWidget(widget);
+  return serializer._buffer.toString().trim();
+}
 
 /// Serializes a Flutter span tree into a stable, comparable string format.
 ///
@@ -31,6 +43,8 @@ import 'package:gpt_markdown/gpt_markdown.dart' show MarkdownComponent, MdWidget
 /// - `HR` - horizontal rules
 /// - `NEWLINE` - paragraph breaks
 class MarkdownSerializer {
+  MarkdownSerializer({this.builtChildren = const {}});
+  final Map<Widget, List<Widget>> builtChildren;
   final StringBuffer _buffer = StringBuffer();
   int _depth = 0;
 
@@ -52,6 +66,20 @@ class MarkdownSerializer {
   }
 
   void _visitTextSpan(TextSpan span) {
+    // A link is a span now, not a `LinkButton` widget, so it is recognised
+    // here rather than in `_visitWidget`. The serialised shape is unchanged so
+    // existing expectations still read the same.
+    if (span is LinkTextSpan) {
+      // The url is finally available. `buildLinkSpan` never passed one to
+      // `LinkButton`, so the old branch could only ever write the label — the
+      // bug that test/bugs/link_url_not_stored_test.dart was written for, and
+      // the reason the format in test/README.md never matched reality. A
+      // `LinkTextSpan` carries it.
+      final label = span.toPlainText(includePlaceholders: false);
+      _write('LINK("${_escapeText(label)}", url="${_escapeText(span.url)}")');
+      return;
+    }
+
     // Handle text content
     if (span.text != null && span.text!.isNotEmpty) {
       final text = span.text!;
@@ -60,7 +88,11 @@ class MarkdownSerializer {
       if (text == '\n\n') {
         _write('NEWLINE');
       } else if (text.trim().isNotEmpty || text == ' ') {
-        _writeTextWithStyle(text, span.style);
+        _writeTextWithStyle(
+          text,
+          span.style,
+          isInlineCode: span is CodeTextSpan,
+        );
       }
     }
 
@@ -72,7 +104,11 @@ class MarkdownSerializer {
     }
   }
 
-  void _writeTextWithStyle(String text, TextStyle? style) {
+  void _writeTextWithStyle(
+    String text,
+    TextStyle? style, {
+    bool isInlineCode = false,
+  }) {
     final modifiers = <String>[];
 
     if (style != null) {
@@ -89,8 +125,9 @@ class MarkdownSerializer {
       if (style.decoration == TextDecoration.underline) {
         modifiers.add('underline');
       }
-      // Highlight detection: check for background paint
-      if (style.background != null) {
+      // Highlight detection: a tagged inline-code span, or the legacy
+      // background paint a custom style may still carry.
+      if (isInlineCode || style.background != null) {
         modifiers.add('highlight');
       }
     }
@@ -109,6 +146,17 @@ class MarkdownSerializer {
   }
 
   void _visitWidget(Widget widget) {
+    // Scaling boundaries and deferred renderers build below MediaQuery.
+    if (widget is Builder) {
+      for (final child in builtChildren[widget] ?? const <Widget>[]) {
+        _visitWidget(child);
+      }
+      return;
+    }
+    if (widget is MediaQuery) {
+      _visitWidget(widget.child);
+      return;
+    }
     // Unwrap common wrapper widgets
     if (widget is Row) {
       for (final child in widget.children) {
@@ -213,7 +261,8 @@ class MarkdownSerializer {
 
     // Link button
     if (widget is LinkButton) {
-      final urlPart = widget.url != null ? ', url="${_escapeText(widget.url!)}"' : '';
+      final urlPart =
+          widget.url != null ? ', url="${_escapeText(widget.url!)}"' : '';
       _write('LINK("${_escapeText(widget.text)}"$urlPart)');
       return;
     }
@@ -286,6 +335,18 @@ class MarkdownSerializer {
       return;
     }
 
+    // Text / Text.rich (produced by config.getRich in the plusparse
+    // renderer). Must be handled before the type-name heuristics below —
+    // 'Text'.contains('Tex') would otherwise mislabel it as LATEX.
+    if (widget is Text) {
+      if (widget.textSpan != null) {
+        _visitSpan(widget.textSpan!);
+      } else if (widget.data != null && widget.data!.trim().isNotEmpty) {
+        _writeTextWithStyle(widget.data!, widget.style);
+      }
+      return;
+    }
+
     // LaTeX - Math widget from flutter_math_fork
     // We detect it by checking the widget type name since we can't import the type
     final typeName = widget.runtimeType.toString();
@@ -308,7 +369,7 @@ class MarkdownSerializer {
   void _serializeTable(Table table) {
     _write('TABLE(');
     _depth++;
-    
+
     bool isFirstRow = true;
     for (final row in table.children) {
       final cells = <String>[];
@@ -323,7 +384,7 @@ class MarkdownSerializer {
         _write('ROW(${cells.map((c) => '"$c"').join(', ')})');
       }
     }
-    
+
     _depth--;
     _write(')');
   }
@@ -417,6 +478,9 @@ class MarkdownSerializer {
 }
 
 /// Convenience function to serialize a span tree.
-String serializeMarkdown(InlineSpan span) {
-  return MarkdownSerializer().serialize(span);
+String serializeMarkdown(
+  InlineSpan span, {
+  Map<Widget, List<Widget>> builtChildren = const {},
+}) {
+  return MarkdownSerializer(builtChildren: builtChildren).serialize(span);
 }

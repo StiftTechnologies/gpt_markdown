@@ -57,16 +57,15 @@ Use the `rewards card` for discounts.
       await pumpMarkdown(tester, complexDocument);
 
       // Should render successfully
-      expect(find.byType(RichText), findsWidgets);
+      expect(find.byWidgetPredicate((w) => w is RichText), findsWidgets);
     });
 
     testWidgets('contains all heading levels', (tester) async {
       await pumpMarkdown(tester, complexDocument);
-      final output = getSerializedOutput(tester);
 
       // Document has h1, h2, h3 headings
       // They should all render (even if serialized differently)
-      expect(find.byType(RichText), findsWidgets);
+      expect(find.byWidgetPredicate((w) => w is RichText), findsWidgets);
     });
 
     testWidgets('contains unordered list items', (tester) async {
@@ -142,9 +141,9 @@ Use the `rewards card` for discounts.
       // Links in list, table, and checkbox sections
       expect(output, contains('LINK'));
       // Link in unordered list
-      expect(output, contains('LINK("Recipe ideas")'));
+      expect(output, contains('LINK("Recipe ideas", url='));
       // Link in checkbox item
-      expect(output, contains('LINK("Grocery Store")'));
+      expect(output, contains('LINK("Grocery Store", url='));
     });
 
     testWidgets('contains bold text', (tester) async {
@@ -205,7 +204,7 @@ Some introductory text with **bold** and *italic* formatting.
     testWidgets('nested document renders completely', (tester) async {
       await pumpMarkdown(tester, nestedDocument);
 
-      expect(find.byType(RichText), findsWidgets);
+      expect(find.byWidgetPredicate((w) => w is RichText), findsWidgets);
     });
 
     testWidgets('has correct element counts', (tester) async {
@@ -227,7 +226,9 @@ Some introductory text with **bold** and *italic* formatting.
       // 1 blockquote
       expect('BLOCKQUOTE'.allMatches(output).length, equals(1));
 
-      // 1 horizontal rule
+      // 1 horizontal rule: the literal `---`. Upstream also draws one under an
+      // H1, which is where its second match came from; this fork drops that
+      // rule, so only the literal one remains.
       expect('HR'.allMatches(output).length, equals(1));
     });
   });
@@ -246,8 +247,19 @@ Paragraph after double newline.
       await pumpMarkdown(tester, markdown);
       final output = getSerializedOutput(tester);
 
-      expect(output, contains('NEWLINE'));
+      // Blank lines separate blocks. The regex pipeline holds the whole
+      // document in one paragraph and marks the gaps with `NEWLINE` spans;
+      // the incremental pipeline gives each block its own paragraph and the
+      // gap is the space between them. What matters either way is that the
+      // blocks came out separate and in order.
+      expect(output, contains('Heading'));
+      expect(output, contains('Paragraph after double newline.'));
       expect(output, contains('UL_ITEM'));
+      expect(output, contains('List item after double newline'));
+      expect(
+        output.indexOf('Heading'),
+        lessThan(output.indexOf('Paragraph after double newline.')),
+      );
     });
 
     testWidgets('mixed list formats', (tester) async {
