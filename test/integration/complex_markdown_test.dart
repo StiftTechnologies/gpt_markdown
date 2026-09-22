@@ -226,13 +226,10 @@ Some introductory text with **bold** and *italic* formatting.
       // 1 blockquote
       expect('BLOCKQUOTE'.allMatches(output).length, equals(1));
 
-      // 2 horizontal rules: the literal `---`, and the automatic divider under
-      // the H1. The regex pipeline builds the heading as one span the
-      // serializer walks past, hiding the divider; the incremental pipeline
-      // renders the heading's content as its own paragraph, so the divider is
-      // reached and counted. Both draw the same two rules — only one of them
-      // is visible to a serializer.
-      expect('HR'.allMatches(output).length, equals(2));
+      // 1 horizontal rule: the literal `---`. Upstream also draws one under an
+      // H1, which is where its second match came from; this fork drops that
+      // rule, so only the literal one remains.
+      expect('HR'.allMatches(output).length, equals(1));
     });
   });
 
